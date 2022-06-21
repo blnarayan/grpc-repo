@@ -1,0 +1,111 @@
+// Copyright 2015 gRPC authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "google.golang.org/grpcgo/placelocation";
+option java_multiple_files = true;
+option java_package = "io.grpc.examples.placelocation";
+option java_outer_classname = "PlaceLocationProto";
+
+package placelocation;
+
+// Interface exported by the server.
+service PlaceLocation {
+  // A simple RPC.
+  //
+  // Obtains the place at a given location.
+  //
+  // A place with an empty name is returned if there's no place at the given
+  // location.
+  rpc GetPlace(Location) returns (Place) {}
+
+  // A server-to-client streaming RPC.
+  //
+  // Obtains the Places available within the given coordinates.  Results are
+  // streamed rather than returned at once (e.g. in a response message with a
+  // repeated field), as the coordinates may cover a large area and contain a
+  // huge number of places.
+  rpc ListPlaces(Coordinates) returns (stream Place) {}
+
+  // A client-to-server streaming RPC.
+  //
+  // Accepts a stream of Locations on a path being traversed, returning a
+  // PathSummary when traversal is completed.
+  rpc RecordPath(stream Location) returns (PathSummary) {}
+
+  // A Bidirectional streaming RPC.
+  //
+  // Accepts a stream of LocationNotes sent while a path is being traversed,
+  // while receiving other PathNotes (e.g. from other users).
+  rpc PathChat(stream LocationNote) returns (stream LocationNote) {}
+}
+
+// Locations are represented as latitude-longitude pairs in the E7 representation
+// (degrees multiplied by 10**7 and rounded to the nearest integer).
+// Latitudes should be in the range +/- 90 degrees and longitude should be in
+// the range +/- 180 degrees (inclusive).
+message Location {
+  int32 latitude = 1;
+  int32 longitude = 2;
+}
+
+// latitude-longitude coordinates, represented as two diagonally opposite
+// locations "lo" and "hi".
+message Coordinates {
+  // One corner of the rectangle.
+  Location lo = 1;
+
+  // The other corner of the rectangle.
+  Location hi = 2;
+}
+
+// A place names something at a given location.
+//
+// If a feature could not be named, the name is empty.
+message Place {
+  // The name of the feature.
+  string name = 1;
+
+  // The location where the place is detected.
+  Location location = 2;
+}
+
+// A LocationNote is a message sent while at a given location.
+message LocationNote {
+  // The location from which the message is sent.
+  Location location = 1;
+
+  // The message to be sent.
+  string message = 2;
+}
+
+// A PathSummary is received in response to a RecordPath rpc.
+//
+// It contains the number of individual locations received, the number of
+// detected places, and the total distance covered as the cumulative sum of
+// the distance between each location.
+message PathSummary {
+  // The number of Locations received.
+  int32 location_count = 1;
+
+  // The number of known places passed while traversing the path.
+  int32 place_count = 2;
+
+  // The distance covered in metres.
+  int32 distance = 3;
+
+  // The duration of the traversal in seconds.
+  int32 elapsed_time = 4;
+}
